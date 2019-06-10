@@ -10,20 +10,28 @@ const pool = new Pool({
   host: 'ec2-50-19-114-27.compute-1.amazonaws.com',
   database: 'dfes281hj43dmk',
   password: 'f738dbfb04c124e4ebf77906679adb44e682b588273fe9eaa5c0bc551aa50774',
-  port: '5432'
+  port: '5432',
+  ssl: true
 });
+// const secret = 'secret';
+// const pool = new Pool({
+//   user: 'postgres',
+//   host: 'localhost',
+//   database: 'WebTruyen',
+//   password: 'postgres',
+//   port: '5432'
+// });
 //GET admins
-//Create tokenn done
+//Create tokenn
 function createToken(userName) {
   let expirationDate = Math.floor(Date.now() / 1000) + 180 * 60 // 3hours from now
   var token = jwt.sign({
     exp: expirationDate,
     data: userName
   }, secret);
-
   return token;
 }
-//Verify token done
+//Verify token
 function verifyToken(req, res, next) {
   //GET auth header values
   const bearerHeader = req.headers['authorization'];
@@ -40,55 +48,69 @@ function verifyToken(req, res, next) {
     res.sendStatus(401);
   }
 }
-
-//Done mangas
-//GET all Mangas
+//GET Mangas
 const getManga = (request, response) => {
   var offset = request.query.page * 20 - 20;
-  pool.query({
-    text: `SELECT * FROM "Manga" LIMIT 20 OFFSET $1 `,
-    values: [offset]
-  }, (error, results) => {
-    if (error) {
-      throw error;
-    }
-    response.status(200).json(results.rows);
-  });
-};
-//GET manga by name
-const getMangaByName = (request, response) => {
-  // console.log(request.query);
-  var name = request.query.name.toUpperCase();;
-  console.log(name);
-  pool.query({
-    text: `SELECT * FROM "Manga" WHERE Upper(manga_name) LIKE $1 `,
-    values: ['%' + name + '%']
-  }, (error, results) => {
-    if (error) {
-      throw error;
-    }
-    response.status(200).json(results.rows);
+  var name = request.query.name;
+  var genre = request.query.genre;
+  if (name == undefined && genre == undefined) {
+    pool.query({
+      text: `SELECT * FROM "Manga" LIMIT 20 OFFSET $1 `,
+      values: [offset]
+    }, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      response.status(200).json(results.rows);
+    });
+  } else if (name != undefined && genre == undefined) {
+    var name1 = name.toUpperCase();
+    pool.query({
+      text: `SELECT * FROM "Manga" WHERE Upper(manga_name) LIKE $1   LIMIT 20 OFFSET $2`,
+      values: ['%' + name1 + '%', offset]
+    }, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      response.status(200).json(results.rows);
 
-  });
-};
-//GET manga by genre
-const getMangaByGenre = (request, response) => {
-  var genre = request.query.genre.toUpperCase();
-  console.log(genre);
-  pool.query({
-    text: `SELECT manga_name
-          FROM "Manga"
-          WHERE manga_id IN (SELECT manga_id
-                              FROM "Genre"
-                              WHERE Upper(gen_name) LIKE $1)  `,
-    values: ['%' + genre + '%']
-  }, (error, results) => {
-    if (error) {
-      throw error;
-    }
-    response.status(200).json(results.rows);
+    });
+  } else if (name == undefined && genre != undefined) {
+    var genre1 = genre.toUpperCase();
+    pool.query({
+      text: `SELECT *
+            FROM "Manga"
+            WHERE manga_id IN (SELECT manga_id
+                                FROM "Genre"
+                                WHERE Upper(gen_name) LIKE $1)
+            LIMIT 20 OFFSET $2 `,
+      values: ['%' + genre1 + '%', offset]
+    }, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      response.status(200).json(results.rows);
 
-  });
+    });
+  } else if (name != undefined && genre != undefined){
+    var name1 = name.toUpperCase();
+    var genre1 = genre.toUpperCase();
+    pool.query({
+      text: `SELECT *
+            FROM "Manga"
+            WHERE manga_id IN (SELECT manga_id
+                                FROM "Genre"
+                                WHERE Upper(gen_name) LIKE $1) AND Upper(manga_name) LIKE $2
+            LIMIT 20 OFFSET $3 `,
+      values: ['%' + genre1 + '%', '%' + name1 + '%', offset]
+    }, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      response.status(200).json(results.rows);
+
+    });
+  }
 };
 //POST new manga
 const addManga = (request, response) => {
@@ -103,8 +125,8 @@ const addManga = (request, response) => {
   } = request.body;
   //verify token
   if (mangaName == null) {
-    response.status(400).send('Missing manga name');
-  }else{
+    response.sendStatus(400);
+  } else {
     jwt.verify(request.token, secret, (err, authData) => {
       if (err) {
         response.status(401);
@@ -113,29 +135,33 @@ const addManga = (request, response) => {
         var check = data.indexOf("admin");
         if (check != -1) {
           pool.query({
-            text: 'SELECT * FROM "Manga" WHERE manga_name = $1 OR manga_id = $2',
-            values: [mangaName,mangaID]
+            text: 'SELECT * FROM "Manga" WHERE manga_name = $1 ',
+            values: [mangaName]
           }, (error, result) => {
             if (result.rowCount != 0) {
-              response.status(500).send('Manga existed!');
+              response.status(500).send("Manga existed");
             } else {
               pool.query({
-                text: `INSERT INTO "Manga"(manga_id,manga_name,description,num_of_chap, author, cover) VALUES($1,$2,$3,$4,$5,$6)`,
-                values: [mangaID, mangaName, description, numOfChap, author, cover]
+                text: `INSERT INTO "Manga"(manga_name, description,num_of_chap, author, cover) VALUES($1,$2,$3,$4,$5)`,
+                values: [mangaName, description, numOfChap, author, cover]
               }, (error, result) => {
                 if (error) {
-                  response.status(500).send('Sever error')
+                  response.sendStatus(500);
                 } else {
-                  pool.query({
-                    text: `INSERT INTO "Genre"(manga_id,gen_name) VALUES($1,$2)`,
-                    values: [mangaID,genre]
-                  }, (error, result) => {
-                    if (error) {
-                      response.status(500).send('Sever error')
-                    } else {
-                      response.status(201).send(`Added manga with ID: ${mangaID}`);
-                    }
-                  });
+                  if (genre != "") {
+                    pool.query({
+                      text: `INSERT INTO "Genre"(manga_id,gen_name) VALUES($1,$2)`,
+                      values: [mangaID, genre]
+                    }, (error, result) => {
+                      if (error) {
+                        response.sendStatus(500);
+                      } else {
+                        response.sendStatus(201);
+                      }
+                    });
+                  } else {
+                    response.sendStatus(201);
+                  }
                 }
               });
             }
@@ -178,20 +204,333 @@ const getMangaById = (request, response) => {
     values: [id]
   }, (error, results) => {
     if (error) {
-      throw error;
-    }
-    if (results.rowCount == 0) {
       response.status(404).send('Manga not found');
-    } else {
-      response.status(200).json(results.rows);
+    }else{
+            response.status(200).json(results.rows);
     }
   });
+};
+//update manga
+const updateManga = (request, response) => {
+  const id = parseInt(request.params.id);
+  const {
+    mangaName,
+    description,
+    numOfChap,
+    author,
+    genre,
+    cover
+  } = request.body;
+  var condition = 'manga_id = ' + id;
+  var setData = '';
+  if (mangaName) {
+    setData = setData + ' manga_name = ' + "'" + mangaName + "'";
+  }
+  if (description) {
+    setData = setData + ',description = ' + "'" + description + "'";
+  }
+  if (numOfChap != 0) {
+    setData = setData + ',num_of_chap = ' + numOfChap;
+  }
+  if (author) {
+    setData = setData + ', author = ' + "'" + author + "'";
+  }
+  if (cover) {
+    setData = setData + ',cover = ' + "'" + cover + "'";
+  }
+  if (mangaName == null) {
+    response.sendStatus(400);
+  } else {
+    //verify token
+    jwt.verify(request.token, secret, (err, authData) => {
+      if (err) {
+        response.sendStatus(401);
+      } else {
+        var data = authData.data;
+        var check = data.indexOf("admin");
+        if (check != -1) {
+          pool.query({
+            text: 'UPDATE "Manga" SET' + setData + ' WHERE ' + condition,
+          }, (error, result) => {
+            if (error) {
+              response.sendStatus(500);
+            } else {
+              if (genre != "") {
+                pool.query({
+                  text: 'SELECT * FROM "Genre" WHERE manga_id = $1',
+                  values: [id]
+                }, (error, result) => {
+                  if (error) {
+                    response.sendStatus(500);
+                  } else {
+                    if (result.rowCount != 0) {
+                      pool.query({
+                        text: `UPDATE "Genre" SET gen_name = $2 WHERE manga_id = $1`,
+                        values: [id, genre]
+                      }, (error, result) => {
+                        if (error) {
+                          response.sendStatus(500);
+                        } else {
+                          response.sendStatus(200);
+                        }
+                      });
+                    } else {
+                      pool.query({
+                        text: `INSERT INTO "Genre"(gen_name,manga_id) VALUES($1,$2)`,
+                        values: [genre, id]
+                      }, (error, result) => {
+                        if (error) {
+                          response.sendStatus(500);
+                        } else {
+                          response.sendStatus(200);
+                        }
+                      });
+                    }
+                  }
+                })
+
+              } else {
+                response.sendStatus(200);
+              }
+            }
+          });
+        } else {
+          response.sendStatus(403);
+        }
+      }
+    })
+  }
+};
+//DELETE manga
+const deleteManga = (request, response) => {
+  const id = parseInt(request.params.id);
+  //verify token
+  jwt.verify(request.token, secret, (err, authData) => {
+    if (err) {
+      response.sendStatus(401);
+    } else {
+      var data = authData.data;
+      var check = data.indexOf("admin");
+      if (check != -1) {
+        pool.query({
+          text: 'DELETE FROM "Manga" WHERE manga_id = $1',
+          values: [id]
+        }, (error, result) => {
+          if (error) {
+            response.sendStatus(500);
+          } else {
+            response.status(200).send(`Manga deleted with ID: ${id}`);
+          }
+        });
+      } else {
+        response.sendStatus(403);
+      }
+    }
+  })
+};
+//GET all chapters of manga
+const getChapters = (request, response) => {
+  const mangaId = request.params.id;
+  console.log(mangaId);
+  pool.query({
+    text: `SELECT chap_id,chap_name,chap_content,time_up FROM "Chapter" WHERE manga_id = $1`,
+    values: [mangaId]
+  }, (error, results) => {
+    if (error) {
+      response.status(404);
+    }
+    response.status(200).json(results.rows);
+  });
+};
+//POST add new Chapter
+const addChapter = (request, response) => {
+  const manga_id = parseInt(request.params.id)
+  const {
+    chap_id,
+    chap_name,
+    chap_content,
+    time
+  } = request.body;
+  if (chap_name == null) {
+    response.sendStatus(400);
+  }
+  jwt.verify(request.token, secret, (err, authData) => {
+    if (err) {
+      response.sendStatus(401);
+    } else {
+      var data = authData.data;
+      var check = data.indexOf("admin");
+      if (check != -1) {
+        pool.query({
+          text: 'SELECT * FROM "Chapter" WHERE manga_id = $1 AND chap_name = $2',
+          values: [manga_id, chap_name]
+        }, (error, result) => {
+          if (error) {
+            response.sendStatus(500);
+          } else {
+            if (result.rowCount != 0) {
+              response.sendStatus(500);
+            } else {
+              pool.query({
+                text: `INSERT INTO "Chapter"(manga_id,chap_id,chap_name,chap_content,time_up) VALUES($1,$2,$3,$4,$5)`,
+                values: [manga_id, chap_id, chap_name, chap_content, time]
+              }, (error, result) => {
+                if (error) {
+                  response.sendStatus(500);
+                }
+                response.status(201).send(`Added chapter to manga with id: ${manga_id}`);
+              });
+            }
+          }
+        })
+      } else {
+        response.sendStatus(403);
+      }
+    }
+  })
+};
+//GET chapter by id
+const getChapterById = (request, response) => {
+  const mangaId = parseInt(request.params.mangaid);
+  const chapId = parseInt(request.params.chapterid);
+  pool.query({
+    text: `SELECT * FROM "Chapter" WHERE manga_id = $1 AND chap_id = $2`,
+    values: [mangaId, chapId]
+  }, (error, results) => {
+    if (error) {
+      response.sendStatus(404);
+    }
+    console.log(results.rows);
+    response.status(200).json(results.rows);
+  });
+};
+//PUT update chapter information
+const updateChapter = (request, response) => {
+  const manga = parseInt(request.params.mangaid);
+  const chap = parseInt(request.params.chapterid);
+  const {
+    chap_name,
+    chap_content,
+    time
+  } = request.body;
+  if (chap_name == null) {
+    response.status(400).send('Missing information');
+  }
+  var setData = '';
+  if (chap_name) {
+    setData = setData + 'chap_name=' + "'" + chap_name + "'";
+  }
+  if (chap_content) {
+    setData = setData + ',chap_content=' + "'" + chap_content + "'";
+  }
+  if(time){
+    setData = setData + ',time_up=' +"'"+ time +"'";
+  }
+
+  //verify token
+  jwt.verify(request.token, secret, (err, authData) => {
+    if (err) {
+      response.sendStatus(401);
+    } else {
+      var data = authData.data;
+      var check = data.indexOf("admin");
+      if (check != -1) {
+        pool.query({
+          text: 'UPDATE "Chapter" SET ' + setData + ' WHERE manga_id = $1 AND chap_id = $2',
+          values: [manga, chap]
+        }, (error, result) => {
+          if (error) {
+            response.status(500).send('Sever error');
+          } else {
+            response.status(200).send(`Chapter updated`);
+          }
+        });
+      } else {
+        response.sendStatus(403);
+      }
+    }
+  })
+};
+//DELETE chapter
+const deleteChapter = (request, response) => {
+  const manga = parseInt(request.params.mangaid);
+  const chap = parseFloat(request.params.chapterid);
+  //verify token
+  jwt.verify(request.token, secret, (err, authData) => {
+    if (err) {
+      response.sendStatus(401);
+    } else {
+      var data = authData.data;
+      var check = data.indexOf("admin");
+      if (check != -1) {
+        pool.query({
+          text: 'DELETE FROM "Chapter" WHERE manga_id = $1 AND chap_id = $2',
+          values: [manga, chap]
+        }, (error, result) => {
+          if (error) {
+            throw error;
+            response.status(500).send('Sever error')
+          } else {
+            response.status(200).send(`Chaper deleted with ID: ${chap}`);
+          }
+        });
+      } else {
+        response.sendStatus(403);
+      }
+    }
+  })
+};
+//GET Comments
+const getComment = (request, response) => {
+  const mangaId = parseInt(request.params.mangaid);
+  const chapId = parseInt(request.params.chapterid);
+  pool.query({
+    text: 'SELECT user_name,content,time_up FROM "Comment" WHERE manga_id = $1 AND chap_id = $2',
+    values: [mangaId, chapId]
+  }, (error, result) => {
+    if (error) {
+      response.sendStatus(404);
+    } else {
+      response.status(200).json(result.rows);
+    }
+  });
+};
+//POST add comment
+const addComment = (request, response) => {
+  const mangaId = parseInt(request.params.mangaid);
+  const chapId = parseInt(request.params.chapterid);
+  const {
+    content,
+    time
+  } = request.body;
+  if (content == null) {
+    response.sendStatus(400);
+  } else {
+    //verify user
+    jwt.verify(request.token, secret, (err, authData) => {
+      if (err) {
+        response.sendStatus(401);
+      } else {
+        var user_name = (authData.data.split(" "))[0];
+        pool.query({
+          text: 'INSERT INTO "Comment"(user_name,manga_id,chap_id,content) VALUES($1,$2,$3,$4)',
+          values: [user_name, mangaId, chapId, content]
+        }, (error, result) => {
+          if (error) {
+            response.status(500).send('Sever error')
+          } else {
+            response.status(200).send(`Comment added`);
+          }
+        });
+      }
+    })
+  }
 };
 //PUT add rating
 const addRating = (request, response) => {
   var point = request.body.rating;
   var mangaId = request.params.mangaid;
-  if (!point) {
+  if (!point || point < 0) {
     response.status(400).send('Missing rating point');
     return;
   }
@@ -245,7 +584,7 @@ const addFavorite = (request, response) => {
       } else {
         var username = (authData.data.split(" "))[0];
         console.log(username);
-        if (subscribed == 1) {
+        if (subscribed == "true") {
           pool.query({
             text: 'INSERT INTO "Favorite"(user_name,manga_id) VALUES($1,$2)',
             values: [username, mangaId]
@@ -256,7 +595,7 @@ const addFavorite = (request, response) => {
               response.sendStatus(200);
             }
           });
-        } else if (subscribed != 1) {
+        } else if (subscribed == "false") {
           pool.query({
             text: 'DELETE FROM "Favorite" WHERE manga_id = $1',
             values: [mangaId]
@@ -268,262 +607,6 @@ const addFavorite = (request, response) => {
             }
           });
         }
-      }
-    })
-  }
-};
-//DELETE manga
-const deleteManga = (request, response) => {
-  const id = parseInt(request.params.id);
-  //verify token
-  jwt.verify(request.token, secret, (err, authData) => {
-    if (err) {
-      response.sendStatus(401);
-    } else {
-      var data = authData.data;
-      var check = data.indexOf("admin");
-      if (check != -1) {
-        pool.query({
-          text: 'DELETE FROM "Manga" WHERE manga_id = $1',
-          values: [id]
-        }, (error, result) => {
-          if (error) {
-            response.status(500).send('Sever error')
-          } else {
-            response.status(200).send(`Manga deleted with ID: ${id}`);
-          }
-        });
-      } else {
-        response.sendStatus(403);
-      }
-    }
-  })
-};
-//update manga
-const updateManga = (request, response) => {
-  const id = parseInt(request.params.id);
-  const {
-    mangaID,
-    mangaName,
-    description,
-    numOfChap,
-    author,
-    cover
-  } = request.body;
-  if (mangaName == null | mangaID == null) {
-    response.status(400).send('Missing information');
-  }
-  //verify token
-  jwt.verify(request.token, secret, (err, authData) => {
-    if (err) {
-      response.sendStatus(401);
-    } else {
-
-      var data = authData.data;
-      var check = data.indexOf("admin");
-      if (check != -1) {
-        pool.query({
-          text: 'UPDATE "Manga" SET manga_id = $1, manga_name = $2, description = $3, num_of_chap = $4, author = $5, cover = $7 WHERE manga_id = $6',
-          values: [mangaID, mangaName, description, numOfChap, author, id, cover]
-        }, (error, result) => {
-          if (error) {
-            response.status(500).send('Sever error')
-          } else {
-            response.status(200).send(`Manga updated`);
-          }
-        });
-      } else {
-        response.sendStatus(403);
-      }
-    }
-  })
-};
-//POST add new Chapter
-const addChapter = (request, response) => {
-  const {
-    mangaId,
-    chapId,
-    chap_name,
-    chap_content,
-    time
-  } = request.body;
-  if (mangaId == null || chapId == null || chap_name == null || chap_content == null) {
-    response.sendStatus(400);
-  }
-  jwt.verify(request.token, secret, (err, authData) => {
-    if (err) {
-      response.sendStatus(401);
-    } else {
-      var data = authData.data;
-      var check = data.indexOf("admin");
-      if (check != -1) {
-        pool.query({
-          text: 'SELECT * FROM "Chapter" WHERE manga_id = $1 AND chap_id = $2',
-          values: [mangaId, chapId]
-        }, (error, result) => {
-          if (error) {
-            response.sendStatus(500);
-          } else {
-            if (result.rowCount != 0) {
-              response.sendStatus(500);
-            } else {
-              pool.query({
-                text: `INSERT INTO "Chapter"(manga_id,chap_id,chap_name,chap_content) VALUES($1,$2,$3,$4)`,
-                values: [mangaId, chapId, chap_name, chap_content]
-              }, (error, result) => {
-                if (error) {
-                  response.sendStatus(500);
-                }
-                response.status(201).send(`Added chapter with id ${chapId} to manga with id: ${mangaId}`);
-              });
-            }
-          }
-        })
-      } else {
-        response.sendStatus(403);
-      }
-    }
-  })
-};
-//GET all chapters of manga
-const getChapters = (request, response) => {
-  const mangaId = request.params.id;
-  console.log(mangaId);
-  pool.query({
-    text: `SELECT chap_id,chap_name,chap_content,time_up FROM "Chapter" WHERE manga_id = $1`,
-    values: [mangaId]
-  }, (error, results) => {
-    if (error) {
-      response.status(404);
-    }
-    response.status(200).json(results.rows);
-  });
-};
-//GET chapter by id
-const getChapterById = (request, response) => {
-  const mangaId = parseInt(request.query.manga);
-  const chapId = parseInt(request.query.chapter);
-  pool.query({
-    text: `SELECT * FROM "Chapter" WHERE manga_id = $1 AND chap_id = $2`,
-    values: [mangaId, chapId]
-  }, (error, results) => {
-    if (error) {
-      response.sendStatus(404);
-    }
-    console.log(results.rows);
-    response.status(200).json(results.rows);
-  });
-};
-//PUT update chapter information
-const updateChapter = (request, response) => {
-  const manga = parseInt(request.query.manga);
-  const chap = parseInt(request.query.chapter);
-  const {
-    mangaId,
-    chapId,
-    chap_name,
-    chap_content,
-    time
-  } = request.body;
-  if (mangaId == null | chapId == null | chap_name == null | chap_content == null) {
-    response.status(400).send('Missing information');
-  }
-  //verify token
-  jwt.verify(request.token, secret, (err, authData) => {
-    if (err) {
-      response.sendStatus(401);
-    } else {
-      var data = authData.data;
-      var check = data.indexOf("admin");
-      if (check != -1) {
-        pool.query({
-          text: 'UPDATE "Chapter" SET manga_id = $1, chap_id = $2, chap_name = $3, chap_content = $4 WHERE manga_id = $5 AND chap_id = $6',
-          values: [mangaId, chapId, chap_name, chap_content, manga, chap]
-        }, (error, result) => {
-          if (error) {
-            response.status(500).send('Sever error')
-          } else {
-            response.status(200).send(`Chapter updated`);
-          }
-        });
-      } else {
-        response.sendStatus(403);
-      }
-    }
-  })
-};
-//DELETE chapter
-const deleteChapter = (request, response) => {
-  const manga = parseInt(request.query.manga);
-  const chap = parseFloat(request.query.chapter);
-  //verify token
-  jwt.verify(request.token, secret, (err, authData) => {
-    if (err) {
-      response.sendStatus(401);
-    } else {
-      var data = authData.data;
-      var check = data.indexOf("admin");
-      if (check != -1) {
-        pool.query({
-          text: 'DELETE FROM "Chapter" WHERE manga_id = $1 AND chap_id = $2',
-          values: [manga, chap]
-        }, (error, result) => {
-          if (error) {
-            response.status(500).send('Sever error')
-          } else {
-            response.status(200).send(`Chaper deleted with ID: ${chap}`);
-          }
-        });
-      } else {
-        response.sendStatus(403);
-      }
-    }
-  })
-};
-//GET Comments
-const getComment = (request, response) => {
-  const mangaId = parseInt(request.query.manga);
-  const chapId = parseInt(request.query.chapter);
-  pool.query({
-    text: 'SELECT user_id,content,time_up FROM "Comment" WHERE manga_id = $1 AND chap_id = $2',
-    values: [mangaId, chapId]
-  }, (error, result) => {
-    if (error) {
-      response.sendStatus(404);
-    } else {
-      response.status(200).json(result.rows);
-    }
-  });
-};
-//POST add comment
-const addComment = (request, response) => {
-  const mangaId = parseInt(request.params.mangaid);
-  // const chapId = parseInt(request.query.chapter);
-  const {
-    user_name,
-    chap_id,
-    content,
-    time
-  } = request.body;
-  if (user_name == null | chap_id == null | content == null) {
-    response.sendStatus(400);
-  } else {
-    //verify user
-    jwt.verify(request.token, secret, (err, authData) => {
-      if (err) {
-        response.sendStatus(401);
-      } else {
-        pool.query({
-          text: 'INSERT INTO "Comment"(user_name,manga_id,chap_id,content) VALUES($1,$2,$3,$4)',
-          values: [user_name,mangaId, chap_id, content]
-        }, (error, result) => {
-          if (error) {
-            // response.status(500).send('Sever error')
-            throw error;
-          } else {
-            response.status(200).send(`Comment added`);
-          }
-        });
       }
     })
   }
@@ -562,7 +645,7 @@ const signUp = (req, res) => {
           values: [user.username, user.password]
         }, (error, result) => {
           if (error) {
-            throw error;
+            res.sendStatus(500);
           }
           res.status(201).send(`User added `);
         });
@@ -625,8 +708,6 @@ module.exports = {
   verifyToken,
   getManga,
   getMangaById,
-  getMangaByName,
-  getMangaByGenre,
   getFavoriteManga,
   deleteManga,
   updateManga,
