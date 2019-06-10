@@ -59,7 +59,7 @@ const getManga = (request, response) => {
       values: [offset]
     }, (error, results) => {
       if (error) {
-        throw error;
+        response.sendStatus(500);
       }
       response.status(200).json(results.rows);
     });
@@ -70,7 +70,7 @@ const getManga = (request, response) => {
       values: ['%' + name1 + '%', offset]
     }, (error, results) => {
       if (error) {
-        throw error;
+        response.sendStatus(500);
       }
       response.status(200).json(results.rows);
 
@@ -87,7 +87,7 @@ const getManga = (request, response) => {
       values: ['%' + genre1 + '%', offset]
     }, (error, results) => {
       if (error) {
-        throw error;
+        response.sendStatus(500);
       }
       response.status(200).json(results.rows);
 
@@ -105,7 +105,7 @@ const getManga = (request, response) => {
       values: ['%' + genre1 + '%', '%' + name1 + '%', offset]
     }, (error, results) => {
       if (error) {
-        throw error;
+        response.sendStatus(500);
       }
       response.status(200).json(results.rows);
 
@@ -468,8 +468,7 @@ const deleteChapter = (request, response) => {
           values: [manga, chap]
         }, (error, result) => {
           if (error) {
-            throw error;
-            response.status(500).send('Sever error')
+            response.sendStatus(500);
           } else {
             response.status(200).send(`Chaper deleted with ID: ${chap}`);
           }
