@@ -1,52 +1,62 @@
 //jshint esversion:6
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
+const express = require("express");
+const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt");
+const cors = require("cors");
 const app = express();
-const db = require('./queries');
-const port = 3000;
+const db = require("./queries");
+const port = 8000;
+app.use(cors());
 app.use(bodyParser.json());
 app.use(
   bodyParser.urlencoded({
-    extended: true,
+    extended: true
   })
 );
 
 var urlencodedParser = bodyParser.urlencoded({
   extended: false
 });
-app.post('/signup', db.signUp);
-app.post('/login', db.logIn);
+app.post("/signup", db.signUp);
+app.post("/login", db.logIn);
 
+app.get("/mangas", db.getManga);
+app.get("/mangas/subscribed", db.verifyToken, db.getFavoriteManga);
+app.get("/mangas/:id", db.getMangaById);
+app.delete("/mangas/:id", db.verifyToken, db.deleteManga);
+app.post("/mangas", db.verifyToken, db.addManga);
+app.put("/mangas/:id", db.verifyToken, db.updateManga);
+app.put("/mangas/:mangaid/rating", db.verifyToken, db.addRating);
+app.put("/mangas/:mangaid/subscription", db.verifyToken, db.addFavorite);
 
-app.get('/mangas', db.getManga);
-app.get('/mangas/subscribed',db.verifyToken,db.getFavoriteManga);
-app.get('/mangas/:id', db.getMangaById);
-app.delete('/mangas/:id', db.verifyToken,db.deleteManga);
-app.post('/mangas', db.verifyToken,db.addManga);
-app.put('/mangas/:id', db.verifyToken,db.updateManga);
-app.put('/mangas/:mangaid/rating', db.verifyToken,db.addRating);
-app.put('/mangas/:mangaid/subscription', db.verifyToken,db.addFavorite);
+app.get("/mangas/:id/chapters", db.getChapters);
+app.post("/mangas/:id/chapters", db.verifyToken, db.addChapter);
+app.get("/mangas/:mangaid/chapters/:chapterid", db.getChapterById);
+app.put(
+  "/mangas/:mangaid/chapters/:chapterid",
+  db.verifyToken,
+  db.updateChapter
+);
+app.delete(
+  "/mangas/:mangaid/chapters/:chapterid",
+  db.verifyToken,
+  db.deleteChapter
+);
+app.get("/mangas/:mangaid/chapters/:chapterid/comments", db.getComment);
+app.post(
+  "/mangas/:mangaid/chapters/:chapterid/comments",
+  db.verifyToken,
+  db.addComment
+);
 
-
-
-app.get('/mangas/:id/chapters',db.getChapters)
-app.post('/mangas/:id/chapters',db.verifyToken, db.addChapter);
-app.get('/mangas/:mangaid/chapters/:chapterid', db.getChapterById);
-app.put('/mangas/:mangaid/chapters/:chapterid',db.verifyToken, db.updateChapter);
-app.delete('/mangas/:mangaid/chapters/:chapterid',db.verifyToken, db.deleteChapter);
-app.get('/mangas/:mangaid/chapters/:chapterid/comments', db.getComment);
-app.post('/mangas/:mangaid/chapters/:chapterid/comments',db.verifyToken, db.addComment);
-
-app.get('/genres', db.getGenre);
-app.get('/', (request, response) => {
+app.get("/genres", db.getGenre);
+app.get("/", (request, response) => {
   response.json({
-    info: 'Node.js, Express, and Postgres API'
+    info: "Node.js, Express, and Postgres API"
   });
 });
 
 app.listen(port, () => {
   console.log(`App running on port ${port}.`);
 });
-
