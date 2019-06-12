@@ -1,0 +1,675 @@
+swagger: "2.0"
+info:
+  version: "1.0.0"
+  title: "Mangakool"
+host: "mangakool-server.herokuapp.com"
+basePath: "/"
+schemes:
+  - "https"
+
+paths:
+  /mangas:
+    get:
+      tags:
+        - "manga"
+      summary: "Get list of manga"
+      description: "Return a list of manga based on page or name or genre"
+      parameters:
+        - in: "query"
+          name: "page"
+          description: "Get by page, page size 20"
+          required: false
+          type: integer
+        - in: "query"
+          name: "name"
+          description: "Search by name"
+          required: false
+          type: string
+        - in: "query"
+          name: "genre"
+          description: "Search by genre"
+          required: false
+          type: string
+
+      responses:
+        200:
+          description: "List of manga"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Manga"
+
+    post:
+      tags:
+        - "manga"
+      summary: "Add new manga"
+      description: "Add new manga, admin only"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "New manga info"
+          required: true
+          schema:
+            $ref: "#/definitions/Manga"
+      security:
+        - jwt: []
+
+      responses:
+        201:
+          description: "New manga id"
+          schema:
+            type: string
+        400:
+          description: "If missing manga name"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "If not admin"
+
+  /mangas/subscribed:
+    get:
+      tags:
+        - "manga"
+      summary: "Get list of subscribed manga"
+      description: ""
+      security:
+        - jwt: []
+      responses:
+        200:
+          description: "List of manga"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Manga"
+        401:
+          description: "If no token or token expires"
+
+  /mangas/{id}:
+    get:
+      tags:
+        - "manga"
+      summary: "Get a specific manga"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "manga_id"
+          required: true
+
+      responses:
+        200:
+          description: "Manga info"
+          schema:
+            $ref: "#/definitions/Manga"
+        404:
+          description: "Manga not found"
+
+    put:
+      tags:
+        - "manga"
+      summary: "Change manga info"
+      description: "Update manga, admin only"
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "New manga info"
+          required: true
+          schema:
+            $ref: "#/definitions/Manga"
+      security:
+        - jwt: []
+
+      responses:
+        200:
+          description: "New manga info"
+          schema:
+            $ref: "#/definitions/Manga"
+        400:
+          description: "If missing manga name"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "If not admin"
+
+    delete:
+      tags:
+        - "manga"
+      summary: "Delete manga"
+      description: "Delete manga, admin only"
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "mangaid"
+          required: true
+      security:
+        - jwt: []
+
+      responses:
+        204:
+          description: "Done nothing to return"
+        400:
+          description: "If missing manga name"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "If not admin"
+
+  /mangas/{id}/chapters:
+    get:
+      tags:
+        - "manga"
+      summary: "Get all chapter of a manga"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "manga_id"
+          required: true
+
+      responses:
+        200:
+          description: "Chapter list"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Chapter"
+        404:
+          description: "Manga not found"
+
+    post:
+      tags:
+        - "manga"
+      summary: "Add new chapter"
+      description: "Add new chapter, admin only"
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "New chapter info"
+          required: true
+          schema:
+            $ref: "#/definitions/Chapter"
+      security:
+        - jwt: []
+
+      responses:
+        201:
+          description: "New chapter id"
+          schema:
+            type: object
+            properties:
+              chapter_id:
+                type: string
+              manga_id:
+                type: string
+        400:
+          description: "If missing chapter name"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "If not admin"
+
+  /mangas/{manga_id}/chapters/{chapter_id}:
+    get:
+      tags:
+        - "manga"
+      summary: "Get a specific chapter"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "manga_id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "path"
+          name: "chapter_id"
+          type: string
+          description: "chapter_id"
+          required: true
+      responses:
+        200:
+          description: "Chapter info"
+          schema:
+            $ref: "#/definitions/Chapter"
+        404:
+          description: "Chapter not found"
+
+    put:
+      tags:
+        - "manga"
+      summary: "Change chapter info"
+      description: "Update chapter, admin only"
+      parameters:
+        - in: "path"
+          name: "manga_id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "path"
+          name: "chapter_id"
+          type: string
+          description: "chapter_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "New chapter info"
+          required: true
+          schema:
+            $ref: "#/definitions/Chapter"
+      security:
+        - jwt: []
+
+      responses:
+        200:
+          description: "New chapter info"
+          schema:
+            $ref: "#/definitions/Chapter"
+        400:
+          description: "If missing chapter name"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "If not admin"
+
+    delete:
+      tags:
+        - "manga"
+      summary: "Delete chapter"
+      description: "Delete chapter, admin only"
+      parameters:
+        - in: "path"
+          name: "manga_id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "path"
+          name: "chapter_id"
+          type: string
+          description: "chapter_id"
+          required: true
+      security:
+        - jwt: []
+
+      responses:
+        204:
+          description: "Done nothing to return"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "If not admin"
+
+  /mangas/{manga_id}/chapters/{chapter_id}/comments:
+    get:
+      tags:
+        - "manga"
+      summary: "Get all comments of a chapter"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "manga_id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "path"
+          name: "chapter_id"
+          type: string
+          description: "chapter_id"
+          required: true
+
+      responses:
+        200:
+          description: "Comment list"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Comment"
+        404:
+          description: "Chapter not found"
+
+    post:
+      tags:
+        - "manga"
+      summary: "Add new comment"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "manga_id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "path"
+          name: "chapter_id"
+          type: string
+          description: "chapter_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "New comment info"
+          required: true
+          schema:
+            $ref: "#/definitions/Comment"
+
+      security:
+        - jwt: []
+
+      responses:
+        201:
+          description: "Comment detail"
+          schema:
+            $ref: "#/definitions/Comment"
+
+        400:
+          description: "If missing any data"
+        401:
+          description: "If no token or token expires"
+
+  /mangas/{id}/rating:
+    put:
+      tags:
+        - "manga"
+      summary: "Add rating"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "Rating"
+          required: true
+          schema:
+            type: object
+            properties:
+              rating:
+                type: integer
+
+      security:
+        - jwt: []
+
+      responses:
+        201:
+          description: "Done"
+        400:
+          description: "Missing rating"
+        401:
+          description: "If no token or token expires"
+        404:
+          description: "Manga not found"
+
+  /mangas/{id}/subscription:
+    put:
+      tags:
+        - "manga"
+      summary: "Subscribe or unsubscribe manga"
+      description: ""
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "manga_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "Subscribe or not"
+          required: true
+          schema:
+            type: object
+            properties:
+              subscribed:
+                type: boolean
+
+      security:
+        - jwt: []
+
+      responses:
+        200:
+          description: "Done"
+        400:
+          description: "Missing value"
+        401:
+          description: "If no token or token expires"
+        404:
+          description: "Manga not found"
+
+  /genres:
+    get:
+      tags:
+        - "genres"
+      summary: "Get all genres"
+      description: ""
+
+      responses:
+        200:
+          description: "List of genres"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Genre"
+
+  /signin:
+    post:
+      tags:
+        - "authentication"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "username and password"
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+              password:
+                type: string
+
+      responses:
+        200:
+          description: "jwt token"
+          schema:
+            type: string
+        400:
+          description: "wrong username or password"
+
+  /signup:
+    post:
+      tags:
+        - "authentication"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "username and password"
+          required: true
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+              password:
+                type: string
+
+      responses:
+        201:
+          description: "done"
+        400:
+          description: "missing username or password"
+
+  /password:
+    put:
+      tags:
+        - "authentication"
+      security:
+        - jwt: []
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "old and new password"
+          required: true
+          schema:
+            type: object
+            properties:
+              oldPassword:
+                type: string
+              newPassword:
+                type: string
+
+      responses:
+        200:
+          description: "done"
+        400:
+          description: "missing data or password invalid"
+        401:
+          description: "no token or not the right user"
+
+  /admin/users:
+    get:
+      tags:
+        - "admin"
+      security:
+        - jwt: []
+
+      responses:
+        200:
+          description: "List of users"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/User"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "Not admin"
+
+  /admin/users/{id}:
+    put:
+      tags:
+        - "admin"
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "user_id"
+          required: true
+        - in: "body"
+          name: "body"
+          description: "Admin or not"
+          required: true
+          schema:
+            type: object
+            properties:
+              isAdmin:
+                type: boolean
+      security:
+        - jwt: []
+
+      responses:
+        200:
+          description: "Done"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "Not admin"
+
+    delete:
+      tags:
+        - "admin"
+      parameters:
+        - in: "path"
+          name: "id"
+          type: string
+          description: "user_id"
+          required: true
+      security:
+        - jwt: []
+      responses:
+        204:
+          description: "Done"
+        401:
+          description: "If no token or token expires"
+        403:
+          description: "Not admin"
+
+securityDefinitions:
+  jwt:
+    type: "apiKey"
+    name: "jwt"
+    in: "header"
+
+definitions:
+  User:
+    type: "object"
+    properties:
+      user_id:
+        type: string
+      user_name:
+        type: string
+      password:
+        type: string
+      is_admin:
+        type: boolean
+
+  Comment:
+    type: "object"
+    properties:
+      user_name:
+        type: string
+      chapter_id:
+        type: string
+      content:
+        type: string
+      timestamp:
+        type: integer
+
+  Manga:
+    type: "object"
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      nb_chat:
+        type: integer
+      author:
+        type: string
+      genre:
+        type: string
+      rating:
+        type: string
+      cover:
+        type: string
+
+  Genre:
+    type: "object"
+    properties:
+      name:
+        type: string
+
+  Chapter:
+    type: "object"
+    properties:
+      chapter_id:
+        type: string
+      manga_id:
+        type: string
+      name:
+        type: string
+      content:
+        type: string
+      added:
+        type: integer
