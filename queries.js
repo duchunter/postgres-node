@@ -62,6 +62,7 @@ const getManga = (request, response) => {
       (error, results) => {
         if (error) {
           response.sendStatus(500);
+          console.log(error);
           return;
         }
         if (results) {
@@ -79,6 +80,7 @@ const getManga = (request, response) => {
       (error, results) => {
         if (error) {
           response.sendStatus(500);
+          console.log(error);
           return;
         }
         response.status(200).json(results.rows);
@@ -99,6 +101,7 @@ const getManga = (request, response) => {
       (error, results) => {
         if (error) {
           response.sendStatus(500);
+          console.log(error);
           return;
         }
         response.status(200).json(results.rows);
@@ -120,6 +123,7 @@ const getManga = (request, response) => {
       (error, results) => {
         if (error) {
           response.sendStatus(500);
+          console.log(error);
           return;
         }
         response.status(200).json(results.rows);
@@ -166,6 +170,7 @@ const addManga = (request, response) => {
                   (error, result) => {
                     if (error) {
                       response.sendStatus(500);
+                      console.log(error);
                     } else {
                       if (genre != "") {
                         pool.query(
@@ -176,6 +181,7 @@ const addManga = (request, response) => {
                           (error, result) => {
                             if (error) {
                               response.sendStatus(500);
+                              console.log(error);
                             } else {
                               response.sendStatus(201);
                             }
@@ -285,6 +291,10 @@ const updateManga = (request, response) => {
             (error, result) => {
               if (error) {
                 response.sendStatus(500);
+                console.log(
+                  'UPDATE "Manga" SET' + setData + " WHERE " + condition
+                );
+                console.log(error);
               } else {
                 if (genre != "") {
                   pool.query(
@@ -295,6 +305,7 @@ const updateManga = (request, response) => {
                     (error, result) => {
                       if (error) {
                         response.sendStatus(500);
+                        console.log(error);
                       } else {
                         if (result.rowCount != 0) {
                           pool.query(
@@ -305,6 +316,7 @@ const updateManga = (request, response) => {
                             (error, result) => {
                               if (error) {
                                 response.sendStatus(500);
+                                console.log(error);
                               } else {
                                 response.sendStatus(200);
                               }
@@ -319,6 +331,7 @@ const updateManga = (request, response) => {
                             (error, result) => {
                               if (error) {
                                 response.sendStatus(500);
+                                console.log(error);
                               } else {
                                 response.sendStatus(200);
                               }
@@ -360,6 +373,7 @@ const deleteManga = (request, response) => {
           (error, result) => {
             if (error) {
               response.sendStatus(500);
+              console.log(error);
             } else {
               response.status(200).send(`Manga deleted with ID: ${id}`);
             }
@@ -393,10 +407,12 @@ const addChapter = (request, response) => {
   const { chap_id, chap_name, chap_content, time } = request.body;
   if (chap_name == null) {
     response.sendStatus(400);
+    return;
   }
   jwt.verify(request.token, secret, (err, authData) => {
     if (err) {
       response.sendStatus(401);
+      return;
     } else {
       var data = authData.data;
       var check = data.indexOf("admin");
@@ -410,18 +426,24 @@ const addChapter = (request, response) => {
           (error, result) => {
             if (error) {
               response.sendStatus(500);
+              console.log(error);
+              return;
             } else {
               if (result.rowCount != 0) {
                 response.sendStatus(500);
+                console.log(error);
+                return;
               } else {
                 pool.query(
                   {
-                    text: `INSERT INTO "Chapter"(manga_id,chap_id,chap_name,chap_content,time_up) VALUES($1,$2,$3,$4,$5)`,
-                    values: [manga_id, chap_id, chap_name, chap_content, time]
+                    text: `INSERT INTO "Chapter"(manga_id,chap_id,chap_name,chap_content) VALUES($1,$2,$3,$4)`,
+                    values: [manga_id, chap_id, chap_name, chap_content]
                   },
                   (error, result) => {
                     if (error) {
                       response.sendStatus(500);
+                      console.log(error);
+                      return;
                     }
                     response
                       .status(201)
@@ -434,6 +456,7 @@ const addChapter = (request, response) => {
         );
       } else {
         response.sendStatus(403);
+        return;
       }
     }
   });
@@ -527,6 +550,8 @@ const deleteChapter = (request, response) => {
           (error, result) => {
             if (error) {
               response.sendStatus(500);
+              console.log(error);
+              console.log(error);
             } else {
               response.status(200).send(`Chaper deleted with ID: ${chap}`);
             }
@@ -650,13 +675,14 @@ const addFavorite = (request, response) => {
   var mangaId = request.params.mangaid;
   if (subscribed == null) {
     response.sendStatus(400);
+    console.log(request.body);
   } else {
     jwt.verify(request.token, secret, (err, authData) => {
       if (err) {
         response.sendStatus(401);
       } else {
         var username = authData.data.split(" ")[0];
-        if (subscribed == "true") {
+        if (subscribed) {
           pool.query(
             {
               text: 'INSERT INTO "Favorite"(user_name,manga_id) VALUES($1,$2)',
