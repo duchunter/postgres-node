@@ -57,7 +57,7 @@ const getManga = (request, response) => {
   var genre = request.query.genre;
   if (name == undefined && genre == undefined) {
     pool.query({
-        text: `SELECT * FROM "Manga" LIMIT 20 OFFSET $1 `,
+        text: `SELECT * FROM "Manga" ORDER BY manga_name LIMIT 20 OFFSET $1 `,
         values: [offset]
       },
       (error, results) => {
@@ -74,7 +74,7 @@ const getManga = (request, response) => {
   } else if (name != undefined && genre == undefined) {
     var name1 = name.toUpperCase();
     pool.query({
-        text: `SELECT * FROM "Manga" WHERE Upper(manga_name) LIKE $1   LIMIT 20 OFFSET $2`,
+        text: `SELECT * FROM "Manga" WHERE Upper(manga_name) LIKE $1 ORDER BY manga_name LIMIT 20 OFFSET $2`,
         values: ["%" + name1 + "%", offset]
       },
       (error, results) => {
@@ -95,6 +95,7 @@ const getManga = (request, response) => {
             WHERE manga_id IN (SELECT manga_id
                                 FROM "Genre"
                                 WHERE Upper(gen_name) LIKE $1)
+            ORDER BY manga_name
             LIMIT 20 OFFSET $2 `,
         values: ["%" + genre1 + "%", offset]
       },
@@ -116,6 +117,7 @@ const getManga = (request, response) => {
             WHERE manga_id IN (SELECT manga_id
                                 FROM "Genre"
                                 WHERE Upper(gen_name) LIKE $1) AND Upper(manga_name) LIKE $2
+            ORDER BY manga_name
             LIMIT 20 OFFSET $3 `,
         values: ["%" + genre1 + "%", "%" + name1 + "%", offset]
       },
@@ -142,7 +144,7 @@ const getMangaByAdmin = (request, response) => {
       var check = data.indexOf("admin");
       if (check != -1) {
         pool.query({
-            text: `SELECT *  FROM "Manga" `
+            text: `SELECT * FROM "Manga" ORDER BY manga_name`
           },
           (error, results) => {
             if (error) {
@@ -769,7 +771,7 @@ const addFavorite = (request, response) => {
 const getGenre = (request, response) => {
 
   pool.query({
-      text: `SELECT DISTINCT gen_name FROM "Genre" `
+      text: `SELECT DISTINCT gen_name FROM "Genre" ORDER BY gen_name`
     },
     (error, results) => {
       if (error) {
