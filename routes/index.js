@@ -14,6 +14,7 @@ router.get('/admin/users', db.verifyToken, db.getUser);
 router.delete('/admin/users/:id', db.verifyToken,db.deleteUser);
 router.put('/password', db.verifyToken,db.changePassword);
 
+router.get('/admin/mangas',db.verifyToken,db.getMangaByAdmin);
 router.get("/mangas", db.getManga);
 router.get("/mangas/subscribed", db.verifyToken, db.getFavoriteManga);
 router.get("/mangas/:id", db.getMangaById);
@@ -36,5 +37,6 @@ router.get('/admin/users',db.verifyToken,db.getUser);
 router.delete('/admin/users/:id', db.verifyToken,db.deleteUser);
 router.get('/info',db.verifyToken,db.getInfo);
 router.get('/genres', db.getGenre);
+router.get('/mangas/:id/genres',db.getGenreByManga);
 
 module.exports = router;
