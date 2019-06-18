@@ -947,11 +947,10 @@ const deleteUser = (request, response) => {
 }
 //PUT change password
 const changePassword = (request, response) => {
-  const {
-    oldPassword,
-    newPassword
-  } = request.body;
-  if (!oldPassword | !newPassword) {
+  const oldPassword = request.body.pass;
+  const newPassword = request.body.newPass;
+
+  if (!oldPassword || !newPassword) {
     response.sendStatus(400);
     return;
   } else {
